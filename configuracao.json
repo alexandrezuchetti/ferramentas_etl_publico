@@ -1,0 +1,9 @@
+{
+    "usuario":"",
+    "senha":"",
+    "servidor":"",
+    "regex_arquivo":"",
+    "separador":";",
+    "banco_dados":"",
+    "tabela":""
+}
