@@ -35,32 +35,35 @@ lista_arquivos_erro = []
 lista_erros = []
 dict_falhas = {}
 with  engine.connect() as conn:
-    try:
+    
         lista_arquivos = listarArquivos(regex_arquivo)
         for arquivo in lista_arquivos:
-            if arquivo[-4:] != '.csv':
-                print(f"{arquivo} nao sera importado, pois nao e CSV...")
+            try:
+                if arquivo[-4:] != '.csv':
+                    print(f"{arquivo} nao sera importado, pois nao e CSV...")
+                    continue
+                df = p.read_csv(arquivo, sep=separador)
+                print(f"Comecando importacao de {arquivo}")
+                if tabela_criada == False:
+                    dtype = {}
+                    for coluna in df.columns:
+                        dtype.update({coluna:s.types.Text})
+                    tabela_criada = True
+                    print(f'Metadados da tabela absorvidos de {arquivo}')
+                df.to_sql(tabela, conn, if_exists='append', dtype=dtype, index=False)   
+                print(f'Arquivo {arquivo} importado com sucesso.') 
+            except Exception as e:
+                print(f'{arquivo} nao foi importado... \nPulando arquivo {arquivo}...')
+                lista_arquivos_erro.append(arquivo)
+                lista_erros.append(repr(e).replace(';', '')[:200])
+                dict_falhas.update({'arquivo':lista_arquivos_erro, 'erro':lista_erros})
                 continue
-            df = p.read_csv(arquivo, sep=separador)
-            if tabela_criada == False:
-                dtype = {}
-                for coluna in df.columns:
-                    dtype.update({coluna:s.types.Text})
-                tabela_criada = True
-                print(f'Tabela criada baseado em {arquivo}')
-            df.to_sql(tabela, conn, if_exists='append', dtype=dtype, index=False)   
-            print(f'Arquivo {arquivo} importado com sucesso.') 
-    except Exception as e:
-        print(f'{arquivo} nao foi importado... \nPulando arquivo {arquivo}...')
-        lista_arquivos_erro.append(arquivo)
-        lista_erros.append(repr(e).replace(';', '')[:200])
-        dict_falhas.update({'arquivo':lista_arquivos_erro, 'erro':lista_erros})
 
-    print("Arquivos importados com sucesso. Fechando conexao...")
-    if len(lista_erros) > 0:
-        print(f"Houveram falhas durante a importacao, um log foi gerado...")
-        df = p.DataFrame.from_dict(dict_falhas)
-        log = f'log_falhas_{datetime.now().strftime("%d%m%Y_%H%M%S")}.csv'
-        df.to_csv(log, index=False, sep=';')
-        print(f'{log} \nPressione Enter para finalizar o importador...')
-        input()
+print("Arquivos importados com sucesso. Fechando conexao...")
+if len(lista_erros) > 0:
+    print(f"Houveram falhas durante a importacao, um log foi gerado...")
+    df = p.DataFrame.from_dict(dict_falhas)
+    log = f'log_falhas_{datetime.now().strftime("%d%m%Y_%H%M%S")}.csv'
+    df.to_csv(log, index=False, sep=';')
+    print(f'{log} \nPressione Enter para finalizar o importador...')
+    input()
